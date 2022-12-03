@@ -6,6 +6,7 @@ import SQLite
 @main
 struct Script: ParsableCommand {
     static public var configuration = CommandConfiguration(
+        commandName: "TarPit",
         abstract: "Fetch and store a Mastodon RSS feed",
         version: "0.0.1",
         subcommands: [Init.self, Print.self, Store.self])
@@ -27,15 +28,17 @@ struct Script: ParsableCommand {
 
     struct RSSSource: ParsableArguments {
         @Option(
-            transform: {
-                guard !$0.isEmpty else { return nil }
-                guard let url = URL(string: $0) else {
-                    throw ValidationError("could not parse URL from \($0)")
+            help: "URL of the RSS feed for download",
+            transform: { (s: String) -> URL? in
+                guard let url = URL(string: s) else {
+                    throw ValidationError("could not parse URL from \(s)")
                 }
                 return url
             })
-        var url: URL?
-        @Option()
+        var url: URL? = nil
+        @Option(
+            help: "local file path of the RSS feed"
+        )
         var file: String?
 
         func validate() throws {
@@ -58,12 +61,15 @@ struct Script: ParsableCommand {
     }
 
     struct Store: ParsableCommand {
-        static public var configuration = CommandConfiguration()
+        static public var configuration = CommandConfiguration(
+            commandName: "store",
+            abstract: "store the rss feed contents in an sqlite3 database"
+        )
 
         @Argument()
         var db: String
 
-        @OptionGroup
+        @OptionGroup(title: "where to get the RSS feed")
         var rss: RSSSource
 
         func run() throws {
@@ -75,9 +81,12 @@ struct Script: ParsableCommand {
     }
 
     struct Print: ParsableCommand {
-        static public var configuration = CommandConfiguration()
+        static public var configuration = CommandConfiguration(
+            commandName: "print",
+            abstract: "print the RSS feed to the console (in a totally ad-hoc format which is not very useful at all)"
+        )
 
-        @OptionGroup
+        @OptionGroup(title: "where to get the RSS feed")
         var rss: RSSSource
 
         func run() throws {
