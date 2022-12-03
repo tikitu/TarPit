@@ -35,93 +35,12 @@ struct Script: ParsableCommand {
         var db: String
 
         func run() throws {
+            let file = try String(contentsOfFile: rss)
+            let data = Data(file.utf8)
+            let parser = FeedParser(data: data)
             let db = try Connection(self.db)
-            let schema = Schema()
-            let timestamp = Date()
-            var description = ""
-            var lastBuildDate: Date?
-            defer {
-                do {
-                    try db.run(
-                        schema.trace.table.insert(
-                            schema.trace.timestamp <- timestamp,
-                            schema.trace.lastBuildDate <- lastBuildDate,
-                            schema.trace.description <- description
-                        )
-                    )
-                    print(description)
-                } catch {
-                    print("failed to update trace with \(error)")
-                }
-            }
-            do {
-                let file = try String(contentsOfFile: rss)
-                let data = Data(file.utf8)
-                let parser = FeedParser(data: data)
-                switch parser.parse() {
-                case .failure(let error):
-                    throw error
-                case .success(.rss(let feed)):
-                    lastBuildDate = feed.lastBuildDate
-                    var parsed = 0
-                    var incomplete = 0
-                    var skipped = 0
-                    var inserted = 0
-                    for item in feed.items ?? [] {
-                        guard let guid = item.guid?.value,
-                              let link = item.link,
-                              let pubDate = item.pubDate,
-                              let description = item.description
-                        else {
-                            incomplete += 1
-                            continue
-                        }
-                        parsed += 1
-                        do {
-                            let tootID = try db.run(
-                                schema.toots.table.insert(
-                                    or: .abort,
-                                    schema.toots.guid <- guid,
-                                    schema.toots.link <- link,
-                                    schema.toots.pubDate <- pubDate,
-                                    schema.toots.description <- description
-                                )
-                            )
-                            inserted += 1
-                            for category in (item.categories ?? []).compactMap({ $0.value }) {
-                                let categoryID: Int64
-                                if let row = try? db.pluck(
-                                    schema.categories.table
-                                        .select(schema.categories.id)
-                                        .filter(schema.categories.value == category)) {
-                                    categoryID = try row.get(schema.categories.id)
-                                } else {
-                                    categoryID = try db.run(
-                                        schema.categories.table.insert(
-                                            or: .ignore,
-                                            schema.categories.value <- category
-                                        )
-                                    )
-                                }
-                                try db.run(
-                                    schema.tootsCategories.table.insert(
-                                        schema.tootsCategories.toot <- tootID,
-                                        schema.tootsCategories.category <- categoryID
-                                    )
-                                )
-                            }
-                        } catch let Result.error(_, code, _) where code == SQLITE_CONSTRAINT {
-                            skipped += 1 // we *assume* this was a uniqueness constraint
-                            continue
-                        }
-                    }
-                    description = "incomplete \(incomplete) parsed \(parsed) skipped \(skipped) inserted \(inserted)"
-                default:
-                    throw ValidationError("not a Mastodon RSS feed?")
-                }
-            } catch {
-                description = "failed with error \(error)"
-            }
+
+            parseItemsAndUpdateDB(parser: parser, db: db)
         }
     }
 
@@ -154,6 +73,91 @@ struct Script: ParsableCommand {
                 throw ValidationError("not a Mastodon RSS feed?")
             }
         }
+    }
+}
+
+func parseItemsAndUpdateDB(parser: FeedParser, db: Connection) {
+    let schema = Schema()
+    let timestamp = Date()
+    var description = ""
+    var lastBuildDate: Date?
+    do {
+        switch parser.parse() {
+        case .failure(let error):
+            throw error
+        case .success(.rss(let feed)):
+            lastBuildDate = feed.lastBuildDate
+            var parsed = 0
+            var incomplete = 0
+            var skipped = 0
+            var inserted = 0
+            for item in feed.items ?? [] {
+                guard let guid = item.guid?.value,
+                      let link = item.link,
+                      let pubDate = item.pubDate,
+                      let description = item.description
+                else {
+                    incomplete += 1
+                    continue
+                }
+                parsed += 1
+                do {
+                    let tootID = try db.run(
+                        schema.toots.table.insert(
+                            or: .abort,
+                            schema.toots.guid <- guid,
+                            schema.toots.link <- link,
+                            schema.toots.pubDate <- pubDate,
+                            schema.toots.description <- description
+                        )
+                    )
+                    inserted += 1
+                    for category in (item.categories ?? []).compactMap({ $0.value }) {
+                        let categoryID: Int64
+                        if let row = try? db.pluck(
+                            schema.categories.table
+                                .select(schema.categories.id)
+                                .filter(schema.categories.value == category)) {
+                            categoryID = try row.get(schema.categories.id)
+                        } else {
+                            categoryID = try db.run(
+                                schema.categories.table.insert(
+                                    or: .ignore,
+                                    schema.categories.value <- category
+                                )
+                            )
+                        }
+                        try db.run(
+                            schema.tootsCategories.table.insert(
+                                schema.tootsCategories.toot <- tootID,
+                                schema.tootsCategories.category <- categoryID
+                            )
+                        )
+                    }
+                } catch let Result.error(_, code, _) where code == SQLITE_CONSTRAINT {
+                    skipped += 1 // we *assume* this was a uniqueness constraint
+                    continue
+                }
+            }
+            description = "success: incomplete \(incomplete) parsed \(parsed) skipped \(skipped) inserted \(inserted)"
+        default:
+            throw ValidationError("not a Mastodon RSS feed?")
+        }
+    } catch {
+        description = "failed with error \(error)"
+    }
+
+    do {
+        try db.run(
+            schema.trace.table.insert(
+                schema.trace.timestamp <- timestamp,
+                schema.trace.lastBuildDate <- lastBuildDate,
+                schema.trace.description <- description
+            )
+        )
+        print(description)
+    } catch {
+        print("failed to update trace with \(error)")
     }
 }
 
