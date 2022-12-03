@@ -88,7 +88,28 @@ struct Script: ParsableCommand {
                                 )
                             )
                             inserted += 1
-                            // TODO: handle categories
+                            for category in (item.categories ?? []).compactMap({ $0.value }) {
+                                let categoryID: Int64
+                                if let row = try? db.pluck(
+                                    schema.categories.table
+                                        .select(schema.categories.id)
+                                        .filter(schema.categories.value == category)) {
+                                    categoryID = try row.get(schema.categories.id)
+                                } else {
+                                    categoryID = try db.run(
+                                        schema.categories.table.insert(
+                                            or: .ignore,
+                                            schema.categories.value <- category
+                                        )
+                                    )
+                                }
+                                try db.run(
+                                    schema.tootsCategories.table.insert(
+                                        schema.tootsCategories.toot <- tootID,
+                                        schema.tootsCategories.category <- categoryID
+                                    )
+                                )
+                            }
                         } catch let Result.error(_, code, _) where code == SQLITE_CONSTRAINT {
                             skipped += 1 // we *assume* this was a uniqueness constraint
                             continue
