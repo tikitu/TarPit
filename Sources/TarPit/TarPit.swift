@@ -8,7 +8,7 @@ struct Script: ParsableCommand {
     static public var configuration = CommandConfiguration(
         abstract: "Fetch and store a Mastodon RSS feed",
         version: "0.0.1",
-        subcommands: [Init.self, Fetch.self, Local.self])
+        subcommands: [Init.self, Print.self, Store.self])
 
     struct Init: ParsableCommand {
         static public var configuration = CommandConfiguration(
@@ -25,39 +25,63 @@ struct Script: ParsableCommand {
         }
     }
 
-    struct Local: ParsableCommand {
-        static public var configuration = CommandConfiguration()
+    struct RSSSource: ParsableArguments {
+        @Option(
+            transform: {
+                guard !$0.isEmpty else { return nil }
+                guard let url = URL(string: $0) else {
+                    throw ValidationError("could not parse URL from \($0)")
+                }
+                return url
+            })
+        var url: URL?
+        @Option()
+        var file: String?
 
-        @Argument()
-        var rss: String
+        func validate() throws {
+            if url == nil && file == nil {
+                throw ValidationError("you must specify either --url or --file")
+            }
+            if url != nil && file != nil {
+                throw ValidationError("you cannot specify both --url and --file")
+            }
+        }
+
+        func parser() throws -> FeedParser {
+            if let url { return FeedParser(URL: url) }
+            if let file {
+                let data = try Data(String(contentsOfFile: file).utf8)
+                return FeedParser(data: data)
+            }
+            fatalError("should not happen, validation ensure not both nil")
+        }
+    }
+
+    struct Store: ParsableCommand {
+        static public var configuration = CommandConfiguration()
 
         @Argument()
         var db: String
 
+        @OptionGroup
+        var rss: RSSSource
+
         func run() throws {
-            let file = try String(contentsOfFile: rss)
-            let data = Data(file.utf8)
-            let parser = FeedParser(data: data)
+            let parser = try rss.parser()
             let db = try Connection(self.db)
 
             parseItemsAndUpdateDB(parser: parser, db: db)
         }
     }
 
-    struct Fetch: ParsableCommand {
+    struct Print: ParsableCommand {
         static public var configuration = CommandConfiguration()
 
-        @Argument(
-            transform: {
-                guard let url = URL(string: $0) else {
-                    throw ValidationError("could not parse URL from \($0)")
-                }
-                return url
-            })
-        var url: URL
+        @OptionGroup
+        var rss: RSSSource
 
         func run() throws {
-            let parser = FeedParser(URL: url)
+            let parser = try rss.parser()
             let feed = parser.parse()
             switch feed {
             case .failure(let error):
