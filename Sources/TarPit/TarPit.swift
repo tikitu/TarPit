@@ -2,12 +2,12 @@ import ArgumentParser
 import Foundation
 import FeedKit
 import SQLite
-            
+
 @main
 struct Script: ParsableCommand {
     static public var configuration = CommandConfiguration(
         commandName: "TarPit",
-        abstract: "Fetch and store a Mastodon RSS feed",        
+        abstract: "Fetch and store a Mastodon RSS feed",
         version: "0.0.1",
         subcommands: [Init.self, Print.self, Store.self])
 
