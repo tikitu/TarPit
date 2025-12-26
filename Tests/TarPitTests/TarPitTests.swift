@@ -124,4 +124,29 @@ final class TarPitTests {
             ))
         }
     }
+
+    @Test func htmlStripping() throws {
+        let list = Script.List()
+
+        #expect(list.stripHTML("<p>Hello world</p>") == "Hello world")
+        #expect(list.stripHTML("<p>Hello&nbsp;world</p>") == "Hello world")
+        #expect(list.stripHTML("<p>Hello &amp; goodbye</p>") == "Hello & goodbye")
+        #expect(list.stripHTML("<p>Test &lt;tag&gt;</p>") == "Test <tag>")
+        #expect(list.stripHTML("<p>&quot;quoted&quot;</p>") == "\"quoted\"")
+        #expect(list.stripHTML("<p>&#39;apostrophe&#39;</p>") == "'apostrophe'")
+        #expect(list.stripHTML("<p><strong>Bold</strong> text</p>") == "Bold text")
+    }
+
+    @Test func truncation() throws {
+        let list = Script.List()
+
+        let short = "Short text"
+        #expect(list.truncate(short, maxLength: 100) == "Short text")
+
+        let long = String(repeating: "a", count: 150)
+        let truncated = list.truncate(long, maxLength: 100)
+        #expect(truncated.count == 100)
+        #expect(truncated.hasSuffix("..."))
+        #expect(truncated == String(repeating: "a", count: 97) + "...")
+    }
 }

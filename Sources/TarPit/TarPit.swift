@@ -9,7 +9,7 @@ struct Script: ParsableCommand {
         commandName: "TarPit",
         abstract: "Fetch and store a Mastodon RSS feed",
         version: "0.0.1",
-        subcommands: [Init.self, Print.self, Store.self])
+        subcommands: [Init.self, Print.self, Store.self, List.self])
 
     struct Init: ParsableCommand {
         static public let configuration = CommandConfiguration(
@@ -105,6 +105,72 @@ struct Script: ParsableCommand {
             default:
                 throw ValidationError("not a Mastodon RSS feed?")
             }
+        }
+    }
+
+    struct List: ParsableCommand {
+        static public let configuration = CommandConfiguration(
+            commandName: "list",
+            abstract: "list toots from the database"
+        )
+
+        @Argument()
+        var db: String
+
+        @Option(help: "maximum number of toots to display")
+        var limit: Int?
+
+        func run() throws {
+            let output = try formatOutput(dbPath: self.db, limit: self.limit)
+            print(output, terminator: "")
+        }
+
+        func formatOutput(dbPath: String, limit: Int?, timeZone: TimeZone = .current) throws -> String {
+            let db = try Connection(dbPath)
+            let schema = Schema()
+
+            var query = schema.toots.table.order(schema.toots.pubDate.desc)
+            if let limit {
+                query = query.limit(limit)
+            }
+
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "dd MMM yyyy 'at' HH:mm:ss"
+            dateFormatter.timeZone = timeZone
+
+            var lines: [String] = []
+            for row in try db.prepare(query) {
+                let pubDate = try row.get(schema.toots.pubDate)
+                let description = try row.get(schema.toots.description)
+
+                let cleanDescription = stripHTML(description)
+                let truncated = truncate(cleanDescription, maxLength: 100)
+
+                lines.append("[\(dateFormatter.string(from: pubDate))] \(truncated)")
+            }
+
+            return lines.joined(separator: "\n") + (lines.isEmpty ? "" : "\n")
+        }
+
+        func stripHTML(_ html: String) -> String {
+            var result = html
+            result = result.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            result = result.replacingOccurrences(of: "&nbsp;", with: " ")
+            result = result.replacingOccurrences(of: "&amp;", with: "&")
+            result = result.replacingOccurrences(of: "&lt;", with: "<")
+            result = result.replacingOccurrences(of: "&gt;", with: ">")
+            result = result.replacingOccurrences(of: "&quot;", with: "\"")
+            result = result.replacingOccurrences(of: "&#39;", with: "'")
+            result = result.trimmingCharacters(in: .whitespacesAndNewlines)
+            return result
+        }
+
+        func truncate(_ text: String, maxLength: Int) -> String {
+            if text.count <= maxLength {
+                return text
+            }
+            let index = text.index(text.startIndex, offsetBy: maxLength - 3)
+            return String(text[..<index]) + "..."
         }
     }
 }
