@@ -121,7 +121,12 @@ struct Script: ParsableCommand {
         var limit: Int?
 
         func run() throws {
-            let db = try Connection(self.db)
+            let output = try formatOutput(dbPath: self.db, limit: self.limit)
+            print(output, terminator: "")
+        }
+
+        func formatOutput(dbPath: String, limit: Int?) throws -> String {
+            let db = try Connection(dbPath)
             let schema = Schema()
 
             var query = schema.toots.table.order(schema.toots.pubDate.desc)
@@ -133,6 +138,7 @@ struct Script: ParsableCommand {
             dateFormatter.dateStyle = .medium
             dateFormatter.timeStyle = .short
 
+            var lines: [String] = []
             for row in try db.prepare(query) {
                 let pubDate = try row.get(schema.toots.pubDate)
                 let description = try row.get(schema.toots.description)
@@ -140,8 +146,10 @@ struct Script: ParsableCommand {
                 let cleanDescription = stripHTML(description)
                 let truncated = truncate(cleanDescription, maxLength: 100)
 
-                print("[\(dateFormatter.string(from: pubDate))] \(truncated)")
+                lines.append("[\(dateFormatter.string(from: pubDate))] \(truncated)")
             }
+
+            return lines.joined(separator: "\n") + (lines.isEmpty ? "" : "\n")
         }
 
         func stripHTML(_ html: String) -> String {
