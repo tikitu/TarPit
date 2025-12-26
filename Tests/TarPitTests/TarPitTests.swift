@@ -1,38 +1,37 @@
-import XCTest
+import Testing
 import Foundation
 import SQLite
 @testable import TarPit
 
-final class TarPitTests: XCTestCase {
-    var tempDir: URL!
-    var dbPath: String!
+@Suite
+final class TarPitTests {
+    let tempDir: URL
+    let dbPath: String
 
-    override func setUp() {
-        super.setUp()
+    init() throws {
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         dbPath = tempDir.appendingPathComponent("test.sqlite3").path
     }
 
-    override func tearDown() {
+    deinit {
         try? FileManager.default.removeItem(at: tempDir)
-        super.tearDown()
     }
 
-    func testSchemaCreation() throws {
+    @Test func schemaCreation() throws {
         let db = try Connection(dbPath)
         let schema = Schema()
 
-        XCTAssertNoThrow(try schema.create(db: db))
+        try schema.create(db: db)
 
         // Verify tables exist by querying them
-        XCTAssertNoThrow(try db.prepare(schema.toots.table))
-        XCTAssertNoThrow(try db.prepare(schema.categories.table))
-        XCTAssertNoThrow(try db.prepare(schema.tootsCategories.table))
-        XCTAssertNoThrow(try db.prepare(schema.trace.table))
+        _ = try db.prepare(schema.toots.table)
+        _ = try db.prepare(schema.categories.table)
+        _ = try db.prepare(schema.tootsCategories.table)
+        _ = try db.prepare(schema.trace.table)
     }
 
-    func testInsertAndRetrieveToots() throws {
+    @Test func insertAndRetrieveToots() throws {
         let db = try Connection(dbPath)
         let schema = Schema()
         try schema.create(db: db)
@@ -67,13 +66,13 @@ final class TarPitTests: XCTestCase {
         let query = schema.toots.table.order(schema.toots.pubDate.desc)
         let rows = Array(try db.prepare(query))
 
-        XCTAssertEqual(rows.count, 3)
-        XCTAssertEqual(try rows[0].get(schema.toots.guid), "guid3")
-        XCTAssertEqual(try rows[1].get(schema.toots.guid), "guid2")
-        XCTAssertEqual(try rows[2].get(schema.toots.guid), "guid1")
+        #expect(rows.count == 3)
+        #expect(try rows[0].get(schema.toots.guid) == "guid3")
+        #expect(try rows[1].get(schema.toots.guid) == "guid2")
+        #expect(try rows[2].get(schema.toots.guid) == "guid1")
     }
 
-    func testQueryWithLimit() throws {
+    @Test func queryWithLimit() throws {
         let db = try Connection(dbPath)
         let schema = Schema()
         try schema.create(db: db)
@@ -93,13 +92,13 @@ final class TarPitTests: XCTestCase {
         let query = schema.toots.table.order(schema.toots.pubDate.desc).limit(5)
         let rows = Array(try db.prepare(query))
 
-        XCTAssertEqual(rows.count, 5)
+        #expect(rows.count == 5)
         // Should get the 5 most recent (guid10, guid9, guid8, guid7, guid6)
-        XCTAssertEqual(try rows[0].get(schema.toots.guid), "guid10")
-        XCTAssertEqual(try rows[4].get(schema.toots.guid), "guid6")
+        #expect(try rows[0].get(schema.toots.guid) == "guid10")
+        #expect(try rows[4].get(schema.toots.guid) == "guid6")
     }
 
-    func testDuplicateGuidPrevention() throws {
+    @Test func duplicateGuidPrevention() throws {
         let db = try Connection(dbPath)
         let schema = Schema()
         try schema.create(db: db)
@@ -107,45 +106,47 @@ final class TarPitTests: XCTestCase {
         let testDate = Date()
 
         // Insert first toot
-        XCTAssertNoThrow(try db.run(schema.toots.table.insert(
+        try db.run(schema.toots.table.insert(
             schema.toots.guid <- "duplicate-guid",
             schema.toots.link <- "http://example.com/1",
             schema.toots.pubDate <- testDate,
             schema.toots.description <- "<p>First</p>"
-        )))
+        ))
 
         // Try to insert duplicate - should fail
-        XCTAssertThrowsError(try db.run(schema.toots.table.insert(
-            or: .abort,
-            schema.toots.guid <- "duplicate-guid",
-            schema.toots.link <- "http://example.com/2",
-            schema.toots.pubDate <- testDate,
-            schema.toots.description <- "<p>Second</p>"
-        )))
+        #expect(throws: Error.self) {
+            try db.run(schema.toots.table.insert(
+                or: .abort,
+                schema.toots.guid <- "duplicate-guid",
+                schema.toots.link <- "http://example.com/2",
+                schema.toots.pubDate <- testDate,
+                schema.toots.description <- "<p>Second</p>"
+            ))
+        }
     }
 
-    func testHTMLStripping() throws {
+    @Test func htmlStripping() throws {
         let list = Script.List()
 
-        XCTAssertEqual(list.stripHTML("<p>Hello world</p>"), "Hello world")
-        XCTAssertEqual(list.stripHTML("<p>Hello&nbsp;world</p>"), "Hello world")
-        XCTAssertEqual(list.stripHTML("<p>Hello &amp; goodbye</p>"), "Hello & goodbye")
-        XCTAssertEqual(list.stripHTML("<p>Test &lt;tag&gt;</p>"), "Test <tag>")
-        XCTAssertEqual(list.stripHTML("<p>&quot;quoted&quot;</p>"), "\"quoted\"")
-        XCTAssertEqual(list.stripHTML("<p>&#39;apostrophe&#39;</p>"), "'apostrophe'")
-        XCTAssertEqual(list.stripHTML("<p><strong>Bold</strong> text</p>"), "Bold text")
+        #expect(list.stripHTML("<p>Hello world</p>") == "Hello world")
+        #expect(list.stripHTML("<p>Hello&nbsp;world</p>") == "Hello world")
+        #expect(list.stripHTML("<p>Hello &amp; goodbye</p>") == "Hello & goodbye")
+        #expect(list.stripHTML("<p>Test &lt;tag&gt;</p>") == "Test <tag>")
+        #expect(list.stripHTML("<p>&quot;quoted&quot;</p>") == "\"quoted\"")
+        #expect(list.stripHTML("<p>&#39;apostrophe&#39;</p>") == "'apostrophe'")
+        #expect(list.stripHTML("<p><strong>Bold</strong> text</p>") == "Bold text")
     }
 
-    func testTruncation() throws {
+    @Test func truncation() throws {
         let list = Script.List()
 
         let short = "Short text"
-        XCTAssertEqual(list.truncate(short, maxLength: 100), "Short text")
+        #expect(list.truncate(short, maxLength: 100) == "Short text")
 
         let long = String(repeating: "a", count: 150)
         let truncated = list.truncate(long, maxLength: 100)
-        XCTAssertEqual(truncated.count, 100)
-        XCTAssertTrue(truncated.hasSuffix("..."))
-        XCTAssertEqual(truncated, String(repeating: "a", count: 97) + "...")
+        #expect(truncated.count == 100)
+        #expect(truncated.hasSuffix("..."))
+        #expect(truncated == String(repeating: "a", count: 97) + "...")
     }
 }

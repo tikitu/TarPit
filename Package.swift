@@ -34,6 +34,9 @@ let package = Package(
             dependencies: [
                 "TarPit",
                 .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
+            ],
+            resources: [
+                .copy("__Snapshots__")
             ]),
     ]
 )

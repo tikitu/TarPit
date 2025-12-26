@@ -1,26 +1,25 @@
-import XCTest
+import Testing
 import Foundation
 import SQLite
 import SnapshotTesting
 @testable import TarPit
 
-final class ListOutputTests: XCTestCase {
-    var tempDir: URL!
-    var dbPath: String!
+@Suite
+final class ListOutputTests {
+    let tempDir: URL
+    let dbPath: String
 
-    override func setUp() {
-        super.setUp()
+    init() throws {
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         dbPath = tempDir.appendingPathComponent("test.sqlite3").path
     }
 
-    override func tearDown() {
+    deinit {
         try? FileManager.default.removeItem(at: tempDir)
-        super.tearDown()
     }
 
-    func testListOutputFormatting() throws {
+    @Test func listOutputFormatting() throws {
         let db = try Connection(dbPath)
         let schema = Schema()
         try schema.create(db: db)
@@ -57,7 +56,7 @@ final class ListOutputTests: XCTestCase {
         assertSnapshot(of: output, as: .lines)
     }
 
-    func testListOutputWithLimit() throws {
+    @Test func listOutputWithLimit() throws {
         let db = try Connection(dbPath)
         let schema = Schema()
         try schema.create(db: db)
@@ -79,7 +78,7 @@ final class ListOutputTests: XCTestCase {
         assertSnapshot(of: output, as: .lines)
     }
 
-    func testListOutputEmptyDatabase() throws {
+    @Test func listOutputEmptyDatabase() throws {
         let db = try Connection(dbPath)
         let schema = Schema()
         try schema.create(db: db)
