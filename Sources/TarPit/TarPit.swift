@@ -5,14 +5,14 @@ import SQLite
 
 @main
 struct Script: ParsableCommand {
-    static public var configuration = CommandConfiguration(
+    static public let configuration = CommandConfiguration(
         commandName: "TarPit",
         abstract: "Fetch and store a Mastodon RSS feed",
         version: "0.0.1",
         subcommands: [Init.self, Print.self, Store.self, List.self])
 
     struct Init: ParsableCommand {
-        static public var configuration = CommandConfiguration(
+        static public let configuration = CommandConfiguration(
             commandName: "init",
             abstract: "create the sqlite database & table structure"
         )
@@ -61,7 +61,7 @@ struct Script: ParsableCommand {
     }
 
     struct Store: ParsableCommand {
-        static public var configuration = CommandConfiguration(
+        static public let configuration = CommandConfiguration(
             commandName: "store",
             abstract: "store the rss feed contents in an sqlite3 database"
         )
@@ -81,7 +81,7 @@ struct Script: ParsableCommand {
     }
 
     struct Print: ParsableCommand {
-        static public var configuration = CommandConfiguration(
+        static public let configuration = CommandConfiguration(
             commandName: "print",
             abstract: "print the RSS feed to the console (in a totally ad-hoc format which is not very useful at all)"
         )
@@ -109,7 +109,7 @@ struct Script: ParsableCommand {
     }
 
     struct List: ParsableCommand {
-        static public var configuration = CommandConfiguration(
+        static public let configuration = CommandConfiguration(
             commandName: "list",
             abstract: "list toots from the database"
         )
