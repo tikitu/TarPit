@@ -22,13 +22,13 @@ jobs:
       - name: Set up Swift
         uses: swift-actions/setup-swift@v2
         with:
-          swift-version: '5.7'
+          swift-version: '6.0'
 
       - name: Install swift-format
         run: |
           git clone https://github.com/apple/swift-format.git
           cd swift-format
-          git checkout release/5.7
+          git checkout release/6.0
           swift build -c release
           sudo cp .build/release/swift-format /usr/local/bin/
           cd ..
