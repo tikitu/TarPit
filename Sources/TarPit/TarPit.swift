@@ -17,11 +17,14 @@ struct Script: ParsableCommand {
             abstract: "create the sqlite database & table structure"
         )
 
-        @Argument()
-        var file: String
+        @Argument(help: "Path to the database file (overrides config file and environment variable)")
+        var file: String?
 
         func run() throws {
-            let db = try Connection(file)
+            guard let dbPath = ConfigManager.shared.resolveDBPath(cliArgument: file) else {
+                throw ValidationError("Database path must be specified via argument, TAR_PIT_DB_PATH environment variable, or config file at ~/.config/tar_pit/config.yaml")
+            }
+            let db = try Connection(dbPath)
             try Schema().create(db: db)
         }
     }
@@ -66,15 +69,18 @@ struct Script: ParsableCommand {
             abstract: "store the rss feed contents in an sqlite3 database"
         )
 
-        @Argument()
-        var db: String
+        @Argument(help: "Path to the database file (overrides config file and environment variable)")
+        var db: String?
 
         @OptionGroup(title: "where to get the RSS feed")
         var rss: RSSSource
 
         func run() throws {
+            guard let dbPath = ConfigManager.shared.resolveDBPath(cliArgument: self.db) else {
+                throw ValidationError("Database path must be specified via argument, TAR_PIT_DB_PATH environment variable, or config file at ~/.config/tar_pit/config.yaml")
+            }
             let parser = try rss.parser()
-            let db = try Connection(self.db)
+            let db = try Connection(dbPath)
 
             parseItemsAndUpdateDB(parser: parser, db: db)
         }
@@ -114,14 +120,17 @@ struct Script: ParsableCommand {
             abstract: "list toots from the database"
         )
 
-        @Argument()
-        var db: String
+        @Argument(help: "Path to the database file (overrides config file and environment variable)")
+        var db: String?
 
         @Option(help: "maximum number of toots to display")
         var limit: Int?
 
         func run() throws {
-            let output = try formatOutput(dbPath: self.db, limit: self.limit)
+            guard let dbPath = ConfigManager.shared.resolveDBPath(cliArgument: self.db) else {
+                throw ValidationError("Database path must be specified via argument, TAR_PIT_DB_PATH environment variable, or config file at ~/.config/tar_pit/config.yaml")
+            }
+            let output = try formatOutput(dbPath: dbPath, limit: self.limit)
             print(output, terminator: "")
         }
 

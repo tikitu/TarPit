@@ -19,6 +19,22 @@ swift run TarPit store <db-path> --url <rss-url>   # Fetch and store toots
 swift run TarPit list <db-path> [--limit N]        # List stored toots
 ```
 
+### Configuration
+
+The database path can be specified in multiple ways, with the following priority order:
+
+1. **Command-line argument** (highest priority): `swift run TarPit init /path/to/db.sqlite`
+2. **Environment variable**: `export TAR_PIT_DB_PATH=/path/to/db.sqlite`
+3. **Configuration file** (lowest priority): `~/.config/tar_pit/config.yaml`
+
+Example configuration file (`~/.config/tar_pit/config.yaml`):
+
+```yaml
+db_path: /path/to/your/database.sqlite
+```
+
+If the database path is not specified through any of these methods, the command will fail with an error message.
+
 ## Architecture
 
 Single-package CLI using swift-argument-parser.
@@ -29,7 +45,7 @@ Single-package CLI using swift-argument-parser.
 
 ## Technology Choices
 
-- **Swift 6.0** with strict concurrency
+- **Swift 6.1** with strict concurrency
 - **Swift Testing** framework (not XCTest)
 - **Snapshot testing** for output verification (`Tests/TarPitTests/__Snapshots__/`)
 
@@ -44,10 +60,10 @@ To reproduce the CI environment exactly:
 rm -rf .build
 
 # Build on Linux
-docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.0 swift build
+docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.1 swift build
 
 # Test on Linux
-docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.0 swift test
+docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.1 swift test
 ```
 
 ## Swift 6 Considerations
