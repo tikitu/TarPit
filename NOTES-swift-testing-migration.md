@@ -43,14 +43,11 @@ This document summarizes the changes made to migrate from XCTest to Swift Testin
 
 **Root cause:** On Linux with Swift 6.0, `SQLite.Expression` collides with `FoundationEssentials.Expression` (the new Predicate expression type from iOS 17/macOS 14). This caused the compiler to incorrectly require a `value:` label when creating column expressions.
 
-**Solution:**
-- Added a helper function to create column expressions explicitly:
-  ```swift
-  func col<T>(_ name: String) -> SQLite.Expression<T> {
-      SQLite.Expression<T>(literal: "\"\(name)\"")
-  }
-  ```
-- Fully qualified all `Expression` type annotations as `SQLite.Expression`
+**Solution:** Fully qualify the type as `SQLite.Expression` when creating column expressions:
+```swift
+let id = SQLite.Expression<Int64>("id")
+let guid = SQLite.Expression<String>("guid")
+```
 
 ### 7. Snapshot File Renaming
 
@@ -58,6 +55,27 @@ When test method names changed (removed "test" prefix), snapshot files needed to
 - `testListOutputFormatting.1.txt` → `listOutputFormatting.1.txt`
 - `testListOutputWithLimit.1.txt` → `listOutputWithLimit.1.txt`
 - `testListOutputEmptyDatabase.1.txt` → `listOutputEmptyDatabase.1.txt`
+
+### 8. Fix Timezone-Dependent Snapshot Tests
+
+**Problem:** Snapshot tests for `ListOutputTests` were failing on GitHub Actions (Linux/UTC) because `DateFormatter` uses the system's local timezone by default. Snapshots generated on a local machine (e.g., Europe/Amsterdam) contained different timestamps than what CI produced.
+
+**Solution:**
+- Added `timeZone` parameter to `formatOutput()` with default `.current` (preserves CLI behavior)
+- Tests explicitly pass `TimeZone(identifier: "UTC")!` for consistent results
+- Updated snapshot files to use UTC timestamps
+
+```swift
+// Production code - defaults to user's local timezone
+func formatOutput(dbPath: String, limit: Int?, timeZone: TimeZone = .current) throws -> String {
+    // ...
+    dateFormatter.timeZone = timeZone
+    // ...
+}
+
+// Tests - explicitly use UTC
+let output = try list.formatOutput(dbPath: dbPath, limit: nil, timeZone: TimeZone(identifier: "UTC")!)
+```
 
 ---
 
@@ -79,13 +97,24 @@ When test method names changed (removed "test" prefix), snapshot files needed to
 
 **What we tried:** Adding an extension initializer `init(column name: String)` to Expression.
 
-**Why it wasn't the solution:** The Swift 6.0 compiler on Linux still preferred the existing `init(value:)` initializer over our extension initializer. A free function (`col()`) worked better because it doesn't compete with the type's own initializers.
+**Why it wasn't the solution:** The Swift 6.0 compiler on Linux still preferred the existing `init(value:)` initializer over our extension initializer. The actual fix was simply to fully qualify the type as `SQLite.Expression`.
 
 ### 4. Using `init(value:)` with the column name string
 
 **What we tried:** Changing `Expression<Int64>("id")` to `Expression<Int64>(value: "id")`.
 
 **Why it wasn't the solution:** The `init(value:)` initializer expects an actual value of the underlying type (e.g., `Int64`), not a column name string. The column name initializer is `init(_ identifier: String)` or `init(literal:)`.
+
+### 5. Adding a `col()` helper function
+
+**What we tried:** Adding a helper function to wrap Expression creation:
+```swift
+func col<T>(_ name: String) -> SQLite.Expression<T> {
+    SQLite.Expression<T>(literal: "\"\(name)\"")
+}
+```
+
+**Why it wasn't the solution:** This was unnecessary complexity. The actual fix was simply to fully qualify the type as `SQLite.Expression<T>("name")` at the call site.
 
 ---
 
@@ -102,25 +131,4 @@ docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.0 swift build
 
 # Run tests
 docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.0 swift test
-```
-
-### 8. Fix Timezone-Dependent Snapshot Tests
-
-**Problem:** Snapshot tests for `ListOutputTests` were failing on GitHub Actions (Linux/UTC) because `DateFormatter` uses the system's local timezone by default. Snapshots generated on a local machine (e.g., Europe/Amsterdam) contained different timestamps than what CI produced.
-
-**Solution:**
-- Added `timeZone` parameter to `formatOutput()` with default `.current` (preserves CLI behavior)
-- Tests explicitly pass `TimeZone(identifier: "UTC")!` for consistent results
-- Updated snapshot files to use UTC timestamps
-
-```swift
-// Production code - defaults to user's local timezone
-func formatOutput(dbPath: String, limit: Int?, timeZone: TimeZone = .current) throws -> String {
-    // ...
-    dateFormatter.timeZone = timeZone
-    // ...
-}
-
-// Tests - explicitly use UTC
-let output = try list.formatOutput(dbPath: dbPath, limit: nil, timeZone: TimeZone(identifier: "UTC")!)
 ```

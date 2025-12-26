@@ -3,12 +3,6 @@ import Foundation
 import FeedKit
 import SQLite
 
-// Helper function to work around Swift 6.0 Linux initializer resolution issue
-// where Expression<T>("name") incorrectly requires the `value:` label
-func col<T>(_ name: String) -> SQLite.Expression<T> {
-    SQLite.Expression<T>(literal: "\"\(name)\"")
-}
-
 @main
 struct Script: ParsableCommand {
     static public let configuration = CommandConfiguration(
@@ -291,11 +285,11 @@ struct Schema {
     struct Toots {
         let table = Table("toots")
 
-        let id: SQLite.Expression<Int64> = col("id")
-        let guid: SQLite.Expression<String> = col("guid")
-        let link: SQLite.Expression<String> = col("link")
-        let pubDate: SQLite.Expression<Date> = col("pubDate")
-        let description: SQLite.Expression<String> = col("description")
+        let id = SQLite.Expression<Int64>("id")
+        let guid = SQLite.Expression<String>("guid")
+        let link = SQLite.Expression<String>("link")
+        let pubDate = SQLite.Expression<Date>("pubDate")
+        let description = SQLite.Expression<String>("description")
 
         func createTable() -> String {
             table.create(ifNotExists: true) { t in
@@ -310,8 +304,8 @@ struct Schema {
 
     struct Categories {
         let table = Table("categories")
-        let id: SQLite.Expression<Int64> = col("id")
-        let value: SQLite.Expression<String> = col("value")
+        let id = SQLite.Expression<Int64>("id")
+        let value = SQLite.Expression<String>("value")
 
         func createTable() -> String {
             table.create(ifNotExists: true) { t in
@@ -323,8 +317,8 @@ struct Schema {
 
     struct TootsCategories {
         let table = Table("toots-categories")
-        let toot: SQLite.Expression<Int64> = col("toot")
-        let category: SQLite.Expression<Int64> = col("category")
+        let toot = SQLite.Expression<Int64>("toot")
+        let category = SQLite.Expression<Int64>("category")
 
         func createTable(toots: Toots, categories: Categories) -> String {
             table.create(ifNotExists: true) { t in
@@ -338,9 +332,9 @@ struct Schema {
 
     struct Trace {
         let table = Table("trace")
-        let timestamp: SQLite.Expression<Date> = col("timestamp")
-        let lastBuildDate: SQLite.Expression<Date?> = col("lastBuildDate")
-        let description: SQLite.Expression<String> = col("description")
+        let timestamp = SQLite.Expression<Date>("timestamp")
+        let lastBuildDate = SQLite.Expression<Date?>("lastBuildDate")
+        let description = SQLite.Expression<String>("description")
 
         func createTable() -> String {
             table.create(ifNotExists: true) { t in
