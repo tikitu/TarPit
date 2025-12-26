@@ -1,0 +1,22 @@
+# SwiftLint configuration
+# Only lint our own code, not dependencies
+
+included:
+  - Sources
+  - Tests
+
+excluded:
+  - .build
+  - .swiftpm
+
+# Disable some rules that might be too strict for existing code
+disabled_rules:
+  - todo
+  - line_length
+  - identifier_name  # Allow short names like db, s, t
+  - function_body_length  # Don't enforce function length limits yet
+  - redundant_optional_initialization  # Explicit nil can help readability
+
+opt_in_rules:
+  - empty_count
+  - trailing_newline
