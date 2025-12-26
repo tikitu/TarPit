@@ -1,0 +1,5 @@
+# TarPit Configuration Example
+# Copy this file to ~/.config/tar_pit/config.yaml to use
+
+# Database path - can be absolute or relative
+db_path: /path/to/your/database.sqlite
