@@ -5,14 +5,14 @@ import SQLite
 
 @main
 struct Script: ParsableCommand {
-    static public var configuration = CommandConfiguration(
+    static public let configuration = CommandConfiguration(
         commandName: "TarPit",
         abstract: "Fetch and store a Mastodon RSS feed",
         version: "0.0.1",
         subcommands: [Init.self, Print.self, Store.self])
 
     struct Init: ParsableCommand {
-        static public var configuration = CommandConfiguration(
+        static public let configuration = CommandConfiguration(
             commandName: "init",
             abstract: "create the sqlite database & table structure"
         )
@@ -61,7 +61,7 @@ struct Script: ParsableCommand {
     }
 
     struct Store: ParsableCommand {
-        static public var configuration = CommandConfiguration(
+        static public let configuration = CommandConfiguration(
             commandName: "store",
             abstract: "store the rss feed contents in an sqlite3 database"
         )
@@ -81,7 +81,7 @@ struct Script: ParsableCommand {
     }
 
     struct Print: ParsableCommand {
-        static public var configuration = CommandConfiguration(
+        static public let configuration = CommandConfiguration(
             commandName: "print",
             abstract: "print the RSS feed to the console (in a totally ad-hoc format which is not very useful at all)"
         )
@@ -219,11 +219,11 @@ struct Schema {
     struct Toots {
         let table = Table("toots")
 
-        let id = Expression<Int64>("id")
-        let guid = Expression<String>("guid")
-        let link = Expression<String>("link")
-        let pubDate = Expression<Date>("pubDate")
-        let description = Expression<String>("description")
+        let id = SQLite.Expression<Int64>("id")
+        let guid = SQLite.Expression<String>("guid")
+        let link = SQLite.Expression<String>("link")
+        let pubDate = SQLite.Expression<Date>("pubDate")
+        let description = SQLite.Expression<String>("description")
 
         func createTable() -> String {
             table.create(ifNotExists: true) { t in
@@ -238,8 +238,8 @@ struct Schema {
 
     struct Categories {
         let table = Table("categories")
-        let id = Expression<Int64>("id")
-        let value = Expression<String>("value")
+        let id = SQLite.Expression<Int64>("id")
+        let value = SQLite.Expression<String>("value")
 
         func createTable() -> String {
             table.create(ifNotExists: true) { t in
@@ -251,8 +251,8 @@ struct Schema {
 
     struct TootsCategories {
         let table = Table("toots-categories")
-        let toot = Expression<Int64>("toot")
-        let category = Expression<Int64>("category")
+        let toot = SQLite.Expression<Int64>("toot")
+        let category = SQLite.Expression<Int64>("category")
 
         func createTable(toots: Toots, categories: Categories) -> String {
             table.create(ifNotExists: true) { t in
@@ -266,9 +266,9 @@ struct Schema {
 
     struct Trace {
         let table = Table("trace")
-        let timestamp = Expression<Date>("timestamp")
-        let lastBuildDate = Expression<Date?>("lastBuildDate")
-        let description = Expression<String>("description")
+        let timestamp = SQLite.Expression<Date>("timestamp")
+        let lastBuildDate = SQLite.Expression<Date?>("lastBuildDate")
+        let description = SQLite.Expression<String>("description")
 
         func createTable() -> String {
             table.create(ifNotExists: true) { t in
