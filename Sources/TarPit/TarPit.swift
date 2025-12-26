@@ -135,8 +135,7 @@ struct Script: ParsableCommand {
             }
 
             let dateFormatter = DateFormatter()
-            dateFormatter.dateStyle = .medium
-            dateFormatter.timeStyle = .short
+            dateFormatter.dateFormat = "dd MMM yyyy 'at' HH:mm:ss"
 
             var lines: [String] = []
             for row in try db.prepare(query) {
