@@ -1,0 +1,56 @@
+name: Lint Code
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  swiftlint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-fix violations
+        uses: norio-nomura/action-swiftlint@3.2.1
+        with:
+          args: --fix --format
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit auto-fixes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          # Fetch and checkout the actual branch (not the merge commit)
+          git fetch origin ${{ github.head_ref || github.ref_name }}
+          git checkout ${{ github.head_ref || github.ref_name }}
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          git commit -m "Auto-fix SwiftLint violations"
+
+      - name: Push changes
+        if: steps.check_changes.outputs.changes == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref || github.ref_name }}
+
+      - name: Run SwiftLint (strict check)
+        uses: norio-nomura/action-swiftlint@3.2.1
+        with:
+          args: --strict
