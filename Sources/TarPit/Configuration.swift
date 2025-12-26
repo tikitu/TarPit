@@ -1,19 +1,10 @@
 import Configuration
 import Foundation
 
-struct TarPitConfig: Codable {
-    var dbPath: String?
-
-    enum CodingKeys: String, CodingKey {
-        case dbPath = "db_path"
-    }
-}
-
 struct ConfigManager {
     static let shared = ConfigManager()
 
     private let configFilePath: String
-    private let environmentPrefix = "TAR_PIT"
 
     private init() {
         let homeDir = FileManager.default.homeDirectoryForCurrentUser
@@ -22,26 +13,6 @@ struct ConfigManager {
             .appendingPathComponent("tar_pit")
             .appendingPathComponent("config.yaml")
             .path
-    }
-
-    func loadConfiguration() -> TarPitConfig {
-        var configuration = ConfigurationBuilder()
-
-        // Add YAML file source if it exists
-        if FileManager.default.fileExists(atPath: configFilePath) {
-            configuration.addYAMLFile(atPath: configFilePath, required: false)
-        }
-
-        // Add environment variables with prefix
-        configuration.addEnvironmentVariables(prefix: environmentPrefix)
-
-        do {
-            let config = try configuration.build().get(TarPitConfig.self)
-            return config
-        } catch {
-            // Return empty config if loading fails
-            return TarPitConfig()
-        }
     }
 
     func resolveDBPath(cliArgument: String?) -> String? {
@@ -55,7 +26,35 @@ struct ConfigManager {
             return cliPath
         }
 
-        let config = loadConfiguration()
-        return config.dbPath
+        // Use ConfigReader with providers
+        // Priority is determined by order: first provider has highest priority
+        var providers: [any ConfigProvider] = []
+
+        // Add environment variables provider (highest priority after CLI)
+        providers.append(EnvironmentVariablesProvider())
+
+        // Add YAML file provider if file exists (lowest priority)
+        if FileManager.default.fileExists(atPath: configFilePath) {
+            do {
+                let fileProvider = try FileProvider<YAMLSnapshot>(filePath: configFilePath)
+                providers.append(fileProvider)
+            } catch {
+                // Silently ignore file reading errors
+            }
+        }
+
+        let config = ConfigReader(providers: providers)
+
+        // Try reading with environment variable key
+        if let dbPath = config.string(forKey: "TAR_PIT_DB_PATH") {
+            return dbPath
+        }
+
+        // Try reading with YAML config key
+        if let dbPath = config.string(forKey: "db_path") {
+            return dbPath
+        }
+
+        return nil
     }
 }

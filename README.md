@@ -45,7 +45,7 @@ Single-package CLI using swift-argument-parser.
 
 ## Technology Choices
 
-- **Swift 6.0** with strict concurrency
+- **Swift 6.1** with strict concurrency
 - **Swift Testing** framework (not XCTest)
 - **Snapshot testing** for output verification (`Tests/TarPitTests/__Snapshots__/`)
 
@@ -60,10 +60,10 @@ To reproduce the CI environment exactly:
 rm -rf .build
 
 # Build on Linux
-docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.0 swift build
+docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.1 swift build
 
 # Test on Linux
-docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.0 swift test
+docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.1 swift test
 ```
 
 ## Swift 6 Considerations
