@@ -35,6 +35,8 @@ jobs:
       - name: Commit auto-fixes
         if: steps.check_changes.outputs.changes == 'true'
         run: |
+          # Checkout the actual branch (not the merge commit)
+          git checkout ${{ github.head_ref || github.ref_name }}
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add -A
