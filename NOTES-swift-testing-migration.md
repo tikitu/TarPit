@@ -104,4 +104,23 @@ docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.0 swift build
 docker run --rm -v "$(pwd):/workspace" -w /workspace swift:6.0 swift test
 ```
 
-**Note:** Snapshot tests may fail on Linux due to timezone differences in date formatting. This is a pre-existing issue unrelated to the Swift 6.0 migration.
+### 8. Fix Timezone-Dependent Snapshot Tests
+
+**Problem:** Snapshot tests for `ListOutputTests` were failing on GitHub Actions (Linux/UTC) because `DateFormatter` uses the system's local timezone by default. Snapshots generated on a local machine (e.g., Europe/Amsterdam) contained different timestamps than what CI produced.
+
+**Solution:**
+- Added `timeZone` parameter to `formatOutput()` with default `.current` (preserves CLI behavior)
+- Tests explicitly pass `TimeZone(identifier: "UTC")!` for consistent results
+- Updated snapshot files to use UTC timestamps
+
+```swift
+// Production code - defaults to user's local timezone
+func formatOutput(dbPath: String, limit: Int?, timeZone: TimeZone = .current) throws -> String {
+    // ...
+    dateFormatter.timeZone = timeZone
+    // ...
+}
+
+// Tests - explicitly use UTC
+let output = try list.formatOutput(dbPath: dbPath, limit: nil, timeZone: TimeZone(identifier: "UTC")!)
+```

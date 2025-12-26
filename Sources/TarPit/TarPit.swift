@@ -131,7 +131,7 @@ struct Script: ParsableCommand {
             print(output, terminator: "")
         }
 
-        func formatOutput(dbPath: String, limit: Int?) throws -> String {
+        func formatOutput(dbPath: String, limit: Int?, timeZone: TimeZone = .current) throws -> String {
             let db = try Connection(dbPath)
             let schema = Schema()
 
@@ -142,6 +142,7 @@ struct Script: ParsableCommand {
 
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "dd MMM yyyy 'at' HH:mm:ss"
+            dateFormatter.timeZone = timeZone
 
             var lines: [String] = []
             for row in try db.prepare(query) {

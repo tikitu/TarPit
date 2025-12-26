@@ -51,7 +51,7 @@ final class ListOutputTests {
         ))
 
         let list = Script.List()
-        let output = try list.formatOutput(dbPath: dbPath, limit: nil)
+        let output = try list.formatOutput(dbPath: dbPath, limit: nil, timeZone: TimeZone(identifier: "UTC")!)
 
         assertSnapshot(of: output, as: .lines)
     }
@@ -73,7 +73,7 @@ final class ListOutputTests {
         }
 
         let list = Script.List()
-        let output = try list.formatOutput(dbPath: dbPath, limit: 2)
+        let output = try list.formatOutput(dbPath: dbPath, limit: 2, timeZone: TimeZone(identifier: "UTC")!)
 
         assertSnapshot(of: output, as: .lines)
     }
@@ -84,7 +84,7 @@ final class ListOutputTests {
         try schema.create(db: db)
 
         let list = Script.List()
-        let output = try list.formatOutput(dbPath: dbPath, limit: nil)
+        let output = try list.formatOutput(dbPath: dbPath, limit: nil, timeZone: TimeZone(identifier: "UTC")!)
 
         assertSnapshot(of: output, as: .lines)
     }
