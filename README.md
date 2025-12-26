@@ -21,19 +21,19 @@ swift run TarPit list <db-path> [--limit N]        # List stored toots
 
 ### Configuration
 
-The database path can be specified in multiple ways, with the following priority order:
+The database path can be specified in multiple ways with the following priority order:
 
-1. **Command-line argument** (highest priority): `swift run TarPit init /path/to/db.sqlite`
+1. **Command-line argument** (highest): `swift run TarPit init /path/to/db.sqlite`
 2. **Environment variable**: `export TAR_PIT_DB_PATH=/path/to/db.sqlite`
-3. **Configuration file** (lowest priority): `~/.config/tar_pit/config.yaml`
+3. **Config file** (lowest): `~/.config/tar_pit/config.yaml`
 
-Example configuration file (`~/.config/tar_pit/config.yaml`):
+Example config file (`~/.config/tar_pit/config.yaml`):
 
 ```yaml
 db_path: /path/to/your/database.sqlite
 ```
 
-If the database path is not specified through any of these methods, the command will fail with an error message.
+If no database path is provided through any method, commands will fail with an error.
 
 ## Architecture
 

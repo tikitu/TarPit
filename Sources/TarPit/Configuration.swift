@@ -1,19 +1,10 @@
-import Configuration
 import Foundation
-
-struct TarPitConfig: Codable {
-    var dbPath: String?
-
-    enum CodingKeys: String, CodingKey {
-        case dbPath = "db_path"
-    }
-}
 
 struct ConfigManager {
     static let shared = ConfigManager()
 
     private let configFilePath: String
-    private let environmentPrefix = "TAR_PIT"
+    private let environmentPrefix = "TAR_PIT_"
 
     private init() {
         let homeDir = FileManager.default.homeDirectoryForCurrentUser
@@ -22,26 +13,6 @@ struct ConfigManager {
             .appendingPathComponent("tar_pit")
             .appendingPathComponent("config.yaml")
             .path
-    }
-
-    func loadConfiguration() -> TarPitConfig {
-        var configuration = ConfigurationBuilder()
-
-        // Add YAML file source if it exists
-        if FileManager.default.fileExists(atPath: configFilePath) {
-            configuration.addYAMLFile(atPath: configFilePath, required: false)
-        }
-
-        // Add environment variables with prefix
-        configuration.addEnvironmentVariables(prefix: environmentPrefix)
-
-        do {
-            let config = try configuration.build().get(TarPitConfig.self)
-            return config
-        } catch {
-            // Return empty config if loading fails
-            return TarPitConfig()
-        }
     }
 
     func resolveDBPath(cliArgument: String?) -> String? {
@@ -55,7 +26,34 @@ struct ConfigManager {
             return cliPath
         }
 
-        let config = loadConfiguration()
-        return config.dbPath
+        // Check environment variable
+        if let envPath = ProcessInfo.processInfo.environment["TAR_PIT_DB_PATH"] {
+            return envPath
+        }
+
+        // Check config file
+        if FileManager.default.fileExists(atPath: configFilePath) {
+            do {
+                let yamlData = try String(contentsOfFile: configFilePath, encoding: .utf8)
+                // Simple YAML parsing for "db_path: value" format
+                let lines = yamlData.components(separatedBy: .newlines)
+                for line in lines {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    if trimmed.hasPrefix("db_path:") {
+                        let value = trimmed
+                            .replacingOccurrences(of: "db_path:", with: "")
+                            .trimmingCharacters(in: .whitespaces)
+                            .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+                        if !value.isEmpty && !value.hasPrefix("#") {
+                            return value
+                        }
+                    }
+                }
+            } catch {
+                // Silently ignore file read errors and continue
+            }
+        }
+
+        return nil
     }
 }
